@@ -1,5 +1,5 @@
-extern crate mech_system;
-use mech_system::timer::Timer;
+extern crate mech_time;
+use mech_time::timer::Timer;
 
 fn main() {
 
