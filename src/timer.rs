@@ -1,19 +1,24 @@
 extern crate time;
+extern crate crossbeam_channel;
 use std::time::Duration;
-use mech_core::{Hasher, Machine, MachineRegistrar};
-use std::sync::mpsc::{self, Sender};
+use mech_core::{Hasher, Index, Value, Transaction, Change};
+use mech_utilities::{Machine, MachineRegistrar, RunLoopMessage};
+//use std::sync::mpsc::{self, Sender};
 use std::thread::{self};
+use crossbeam_channel::Sender;
 
 
 
 export_machine!(time_timer, time_timer_reg);
 
-extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar) {
-  registrar.register_machine(Box::new(Timer));
+extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) {
+  registrar.register_machine(Box::new(Timer{outgoing}));
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Timer;
+#[derive(Debug)]
+pub struct Timer {
+  outgoing: Sender<RunLoopMessage>,
+}
 
 impl Machine for Timer {
 
@@ -26,13 +31,18 @@ impl Machine for Timer {
     }
 
     fn call(&self) -> Result<(), String> {
+        let outgoing = self.outgoing.clone();
         thread::spawn(move || {
-          let duration = Duration::from_millis(1000);
+          let duration = Duration::from_millis(1);
           let mut counter = 0;
+          let table_id = Hasher::hash_string("time/timer".to_string());
           loop {
             println!("{}", counter);
             thread::sleep(duration);
-            counter = counter + 1; 
+            counter = counter + 1;
+            outgoing.send(RunLoopMessage::Transaction(Transaction::from_change(
+              Change::Set{table: table_id, row: Index::Index(1), column: Index::Index(2), value: Value::from_u64(counter)}
+            )));
           }
         });
         Ok(())
