@@ -22,3 +22,4 @@ mech-core = {git = "https://gitlab.com/mech-lang/core"}
 mech-utilities = {git = "https://gitlab.com/mech-lang/utilities"}
 
 time = "0.2.15"
+crossbeam-channel = "0.4"
