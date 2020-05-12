@@ -11,8 +11,13 @@ use crossbeam_channel::Sender;
 
 export_machine!(time_timer, time_timer_reg);
 
-extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) {
+extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) -> Vec<Change> {
   registrar.register_machine(Box::new(Timer{outgoing}));
+  vec![
+    Change::NewTable{id: 0xd2d75008, rows: 0, columns: 2},
+    Change::RenameColumn{table: 0xd2d75008, column_ix: 1, column_alias: 0x6972c9df},
+    Change::RenameColumn{table: 0xd2d75008, column_ix: 2, column_alias: 0x6b6369e7},
+  ]
 }
 
 #[derive(Debug)]
@@ -22,31 +27,40 @@ pub struct Timer {
 
 impl Machine for Timer {
 
-    fn name(&self) -> String {
-      "time/timer".to_string()
-    }
+  fn name(&self) -> String {
+    "time/timer".to_string()
+  }
 
-    fn id(&self) -> u64 {
-      Hasher::hash_string(self.name())
-    }
+  fn id(&self) -> u64 {
+    0xd2d75008
+  }
 
-    fn call(&self) -> Result<(), String> {
+  fn on_change(&self, change: &Change) -> Result<(), String> {
+    let period = 0x6972c9df;
+    let ticks = 0x6b6369e7;
+
+    match change {
+      Change::Set{table, row, column: Index::Alias(0x6972c9df), value} => {
         let outgoing = self.outgoing.clone();
+        let duration_value = value.as_u64().unwrap().clone();
+        let timer_row = row.clone();
         thread::spawn(move || {
-          let duration = Duration::from_millis(1);
+          let duration = Duration::from_millis(duration_value);
           let mut counter = 0;
-          let table_id = Hasher::hash_string("time/timer".to_string());
           loop {
-            println!("{}", counter);
             thread::sleep(duration);
             counter = counter + 1;
             outgoing.send(RunLoopMessage::Transaction(Transaction::from_change(
-              Change::Set{table: table_id, row: Index::Index(1), column: Index::Index(2), value: Value::from_u64(counter)}
+              Change::Set{table: 0xd2d75008, row: timer_row, column: Index::Alias(0x6b6369e7), value: Value::from_u64(counter)}
             )));
           }
         });
-        Ok(())
+      }
+      _ => (),
     }
+    Ok(())
+  }
+
 }
 
 
