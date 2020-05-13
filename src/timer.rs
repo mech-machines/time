@@ -40,21 +40,23 @@ impl Machine for Timer {
     let ticks = 0x6b6369e7;
 
     match change {
-      Change::Set{table, row, column: Index::Alias(0x6972c9df), value} => {
-        let outgoing = self.outgoing.clone();
-        let duration_value = value.as_u64().unwrap().clone();
-        let timer_row = row.clone();
-        thread::spawn(move || {
-          let duration = Duration::from_millis(duration_value);
-          let mut counter = 0;
-          loop {
-            thread::sleep(duration);
-            counter = counter + 1;
-            outgoing.send(RunLoopMessage::Transaction(Transaction::from_change(
-              Change::Set{table: 0xd2d75008, row: timer_row, column: Index::Alias(0x6b6369e7), value: Value::from_u64(counter)}
-            )));
-          }
-        });
+      Change::Set{table, column: Index::Alias(0x6972c9df), values} => {
+        for (row, value) in values {
+          let outgoing = self.outgoing.clone();
+          let duration_value = value.as_u64().unwrap().clone();
+          let timer_row = row.clone();
+          thread::spawn(move || {
+            let duration = Duration::from_millis(duration_value);
+            let mut counter = 0;
+            loop {
+              thread::sleep(duration);
+              counter = counter + 1;
+              outgoing.send(RunLoopMessage::Transaction(Transaction::from_change(
+                Change::Set{table: 0xd2d75008, column: Index::Alias(0x6b6369e7), values: vec![(timer_row, Value::from_u64(counter))]}
+              )));
+            }
+          });
+        }
       }
       _ => (),
     }
