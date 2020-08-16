@@ -1,22 +1,25 @@
 extern crate time;
 extern crate crossbeam_channel;
 use std::time::Duration;
-use mech_core::{Hasher, Index, Value, Transaction, Change};
+use mech_core::{hash_string, Index, Value, ValueMethods, Transaction, Change};
 use mech_utilities::{Machine, MachineRegistrar, RunLoopMessage};
 //use std::sync::mpsc::{self, Sender};
 use std::thread::{self};
 use crossbeam_channel::Sender;
 
 
+const TIME_TIMER: u64 = 0x2f0ff36fef6304;
+const PERIOD: u64 = 0xec4f119e178a29;
+const TICKS: u64 = 0xc51ae296e43b15;
 
 export_machine!(time_timer, time_timer_reg);
 
 extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) -> Vec<Change> {
   registrar.register_machine(Box::new(Timer{outgoing}));
   vec![
-    Change::NewTable{id: 0xd2d75008, rows: 0, columns: 2},
-    Change::RenameColumn{table: 0xd2d75008, column_ix: 1, column_alias: 0x6972c9df},
-    Change::RenameColumn{table: 0xd2d75008, column_ix: 2, column_alias: 0x6b6369e7},
+    Change::NewTable{table_id: TIME_TIMER, rows: 0, columns: 2},
+    Change::SetColumnAlias{table_id: TIME_TIMER, column_ix: 1, column_alias: PERIOD},
+    Change::SetColumnAlias{table_id: TIME_TIMER, column_ix: 2, column_alias: TICKS},
   ]
 }
 
@@ -32,30 +35,33 @@ impl Machine for Timer {
   }
 
   fn id(&self) -> u64 {
-    0xd2d75008
+    TIME_TIMER
   }
 
   fn on_change(&self, change: &Change) -> Result<(), String> {
-    let period = 0x6972c9df;
-    let ticks = 0x6b6369e7;
-
+    
     match change {
-      Change::Set{table, column: Index::Alias(0x6972c9df), values} => {
-        for (row, value) in values {
-          let outgoing = self.outgoing.clone();
-          let duration_value = value.as_u64().unwrap().clone();
-          let timer_row = row.clone();
-          thread::spawn(move || {
-            let duration = Duration::from_millis(duration_value);
-            let mut counter = 0;
-            loop {
-              thread::sleep(duration);
-              counter = counter + 1;
-              outgoing.send(RunLoopMessage::Transaction(Transaction::from_change(
-                Change::Set{table: 0xd2d75008, column: Index::Alias(0x6b6369e7), values: vec![(timer_row, Value::from_u64(counter))]}
-              )));
+      Change::Set{table_id, values} => {
+        for (row, column, value) in values {
+          match column {
+            Index::Alias(PERIOD) => {
+              let outgoing = self.outgoing.clone();
+              let duration_value = value.as_u64().unwrap().clone();
+              let timer_row = row.clone();
+              thread::spawn(move || {
+                let duration = Duration::from_millis(duration_value);
+                let mut counter = 0;
+                loop {
+                  thread::sleep(duration);
+                  counter = counter + 1;
+                  outgoing.send(RunLoopMessage::Transaction(Transaction{changes: vec![
+                    Change::Set{table_id: TIME_TIMER, values: vec![(timer_row, Index::Alias(TICKS), Value::from_u64(counter))]}
+                  ]}));
+                }
+              });
             }
-          });
+            _ => (),
+          }
         }
       }
       _ => (),
@@ -64,7 +70,6 @@ impl Machine for Timer {
   }
 
 }
-
 
 /*
 pub struct Timer {
