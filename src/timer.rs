@@ -6,7 +6,7 @@ use mech_utilities::{Machine, MachineRegistrar, RunLoopMessage};
 //use std::sync::mpsc::{self, Sender};
 use std::thread::{self};
 use crossbeam_channel::Sender;
-
+use std::collections::HashMap;
 
 const TIME_TIMER: u64 = 0x2f0ff36fef6304;
 const PERIOD: u64 = 0xec4f119e178a29;
@@ -15,7 +15,7 @@ const TICKS: u64 = 0xc51ae296e43b15;
 export_machine!(time_timer, time_timer_reg);
 
 extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) -> Vec<Change> {
-  registrar.register_machine(Box::new(Timer{outgoing}));
+  registrar.register_machine(Box::new(Timer{outgoing, timers: HashMap::new()}));
   vec![
     Change::NewTable{table_id: TIME_TIMER, rows: 0, columns: 2},
     Change::SetColumnAlias{table_id: TIME_TIMER, column_ix: 1, column_alias: PERIOD},
@@ -26,6 +26,7 @@ extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sen
 #[derive(Debug)]
 pub struct Timer {
   outgoing: Sender<RunLoopMessage>,
+  timers: HashMap<usize, (u64,std::thread::JoinHandle<()>)>,
 }
 
 impl Machine for Timer {
@@ -38,26 +39,34 @@ impl Machine for Timer {
     Register{table_id: TableId::Global(TIME_TIMER), row: Index::All, column: Index::All}.hash()
   }
 
-  fn on_change(&self, table: &Table) -> Result<(), String> {
+  fn on_change(&mut self, table: &Table) -> Result<(), String> {
     for i in 1..=table.rows {
-      let value = table.get(&Index::Index(i), &Index::Alias(PERIOD));
-      match value.unwrap().as_u64() {
-        Some(duration) => {
-          let outgoing = self.outgoing.clone();
-          let timer_row = Index::Index(i);
-          thread::spawn(move || {
-            let duration = Duration::from_millis(duration);
-            let mut counter = 0;
-            loop {
-              thread::sleep(duration);
-              counter = counter + 1;
-              outgoing.send(RunLoopMessage::Transaction(Transaction{changes: vec![
-                Change::Set{table_id: TIME_TIMER, values: vec![(timer_row, Index::Alias(TICKS), Value::from_u64(counter))]}
-              ]}));
-            }
-          });
+      match self.timers.get(&i) {
+        Some(timer) => {
+
         }
-        None => (),
+        None => {
+          let value = table.get(&Index::Index(i), &Index::Alias(PERIOD));
+          match value.unwrap().as_u64() {
+            Some(duration) => {
+              let outgoing = self.outgoing.clone();
+              let timer_row = Index::Index(i);
+              let timer_handle = thread::spawn(move || {
+                let duration = Duration::from_millis(duration);
+                let mut counter = 0;
+                loop {
+                  thread::sleep(duration);
+                  counter = counter + 1;
+                  outgoing.send(RunLoopMessage::Transaction(Transaction{changes: vec![
+                    Change::Set{table_id: TIME_TIMER, values: vec![(timer_row, Index::Alias(TICKS), Value::from_u64(counter))]}
+                  ]}));
+                }
+              });
+              self.timers.insert(i,(duration,timer_handle));
+            }
+            None => (),
+          }
+        }
       }
     }
     Ok(())
