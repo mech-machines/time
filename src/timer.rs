@@ -8,18 +8,20 @@ use std::thread::{self};
 use crossbeam_channel::Sender;
 use std::collections::HashMap;
 
-const TIME_TIMER: u64 = 0x2f0ff36fef6304;
-const PERIOD: u64 = 0xec4f119e178a29;
-const TICKS: u64 = 0xc51ae296e43b15;
+lazy_static! {
+  static ref TIME_TIMER: u64 = hash_string("time/timer");
+  static ref PERIOD: u64 = hash_string("period");
+  static ref TICKS: u64 = hash_string("ticks");
+}
 
 export_machine!(time_timer, time_timer_reg);
 
 extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) -> Vec<Change> {
   registrar.register_machine(Box::new(Timer{outgoing, timers: HashMap::new()}));
   vec![
-    Change::NewTable{table_id: TIME_TIMER, rows: 0, columns: 2},
-    Change::SetColumnAlias{table_id: TIME_TIMER, column_ix: 1, column_alias: PERIOD},
-    Change::SetColumnAlias{table_id: TIME_TIMER, column_ix: 2, column_alias: TICKS},
+    Change::NewTable{table_id: *TIME_TIMER, rows: 0, columns: 2},
+    Change::SetColumnAlias{table_id: *TIME_TIMER, column_ix: 1, column_alias: *PERIOD},
+    Change::SetColumnAlias{table_id: *TIME_TIMER, column_ix: 2, column_alias: *TICKS},
   ]
 }
 
@@ -36,7 +38,7 @@ impl Machine for Timer {
   }
 
   fn id(&self) -> u64 {
-    Register{table_id: TableId::Global(TIME_TIMER), row: Index::All, column: Index::All}.hash()
+    Register{table_id: TableId::Global(*TIME_TIMER), row: Index::All, column: Index::All}.hash()
   }
 
   fn on_change(&mut self, table: &Table) -> Result<(), String> {
@@ -46,7 +48,7 @@ impl Machine for Timer {
 
         }
         None => {
-          let value = table.get(&Index::Index(i), &Index::Alias(PERIOD));
+          let value = table.get(&Index::Index(i), &Index::Alias(*PERIOD));
           match value.unwrap().as_u64() {
             Some(duration) => {
               let outgoing = self.outgoing.clone();
@@ -58,7 +60,7 @@ impl Machine for Timer {
                   thread::sleep(duration);
                   counter = counter + 1;
                   outgoing.send(RunLoopMessage::Transaction(Transaction{changes: vec![
-                    Change::Set{table_id: TIME_TIMER, values: vec![(timer_row, Index::Alias(TICKS), Value::from_u64(counter))]}
+                    Change::Set{table_id: *TIME_TIMER, values: vec![(timer_row, Index::Alias(*TICKS), Value::from_u64(counter))]}
                   ]}));
                 }
               });
