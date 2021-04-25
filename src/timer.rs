@@ -1,7 +1,7 @@
 extern crate time;
 extern crate crossbeam_channel;
 use std::time::Duration;
-use mech_core::{hash_string, Index, Table, Value, ValueMethods, Transaction, Change, TableId, Register};
+use mech_core::{hash_string, TableIndex, Table, Value, ValueMethods, Transaction, Change, TableId, Register};
 use mech_utilities::{Machine, MachineRegistrar, RunLoopMessage};
 //use std::sync::mpsc::{self, Sender};
 use std::thread::{self};
@@ -38,7 +38,7 @@ impl Machine for Timer {
   }
 
   fn id(&self) -> u64 {
-    Register{table_id: TableId::Global(*TIME_TIMER), row: Index::All, column: Index::All}.hash()
+    Register{table_id: TableId::Global(*TIME_TIMER), row: TableIndex::All, column: TableIndex::All}.hash()
   }
 
   fn on_change(&mut self, table: &Table) -> Result<(), String> {
@@ -48,11 +48,11 @@ impl Machine for Timer {
 
         }
         None => {
-          let value = table.get(&Index::Index(i), &Index::Alias(*PERIOD));
+          let value = table.get(&TableIndex::Index(i), &TableIndex::Alias(*PERIOD));
           match value.unwrap().as_u64() {
             Some(duration) => {
               let outgoing = self.outgoing.clone();
-              let timer_row = Index::Index(i);
+              let timer_row = TableIndex::Index(i);
               let timer_handle = thread::spawn(move || {
                 let duration = Duration::from_millis(duration);
                 let mut counter = 0;
@@ -60,7 +60,7 @@ impl Machine for Timer {
                   thread::sleep(duration);
                   counter = counter + 1;
                   outgoing.send(RunLoopMessage::Transaction(Transaction{changes: vec![
-                    Change::Set{table_id: *TIME_TIMER, values: vec![(timer_row, Index::Alias(*TICKS), Value::from_u64(counter))]}
+                    Change::Set{table_id: *TIME_TIMER, values: vec![(timer_row, TableIndex::Alias(*TICKS), Value::from_u64(counter))]}
                   ]}));
                 }
               });
@@ -129,7 +129,7 @@ impl Machine for Timer {
                   //Change::Set{table, row, column: Hasher::hash_str("minute"), value: Value::from_u64(cur_time.tm_min as u64)},
                   //Change::Set{table, row, column: Hasher::hash_str("second"), value: Value::from_u64(cur_time.tm_sec as u64)},
                   //Change::Set{table, row, column: Hasher::hash_str("nano-second"), value: Value::from_u64(cur_time.tm_nsec as u64)},
-                  Change::Set{table: table.clone(), row: mech_core::Index::Index(1), column: mech_core::Index::Alias(Hasher::hash_str("tick")), value: Value::from_u64(tick)},
+                  Change::Set{table: table.clone(), row: mech_core::TableIndex::Index(1), column: mech_core::TableIndex::Alias(Hasher::hash_str("tick")), value: Value::from_u64(tick)},
                   //Change::Set{table, row, column: Hasher::hash_str("dt"), value: Value::from_u64(now - last)},
                 ]);     
                 tick += 1;
