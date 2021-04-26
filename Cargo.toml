@@ -5,13 +5,13 @@ authors = ["Corey Montella <corey@mech-lang.org>"]
 description = "Time library for the Mech language"
 documentation = "http://docs.mech-lang.org"
 homepage = "http://mech-lang.org"
-repository = "https://github.com/mech-lang/time"
+repository = "https://github.com/mech-machines/time"
 keywords = ["mech", "language", "programming"]
 license = "Apache-2.0"
 readme = "README.md"
 
 [badges]
-gitlab = { repository = "mech-lang/time", branch = "master" }
+gitlab = { repository = "mech-lang/machines/time", branch = "main" }
 maintenance = { status = "actively-developed" }
 
 [lib]
