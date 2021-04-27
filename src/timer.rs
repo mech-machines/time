@@ -16,13 +16,9 @@ lazy_static! {
 
 export_machine!(time_timer, time_timer_reg);
 
-extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) -> Vec<Change> {
+extern "C" fn time_timer_reg(registrar: &mut dyn MachineRegistrar, outgoing: Sender<RunLoopMessage>) -> String {
   registrar.register_machine(Box::new(Timer{outgoing, timers: HashMap::new()}));
-  vec![
-    Change::NewTable{table_id: *TIME_TIMER, rows: 0, columns: 2},
-    Change::SetColumnAlias{table_id: *TIME_TIMER, column_ix: 1, column_alias: *PERIOD},
-    Change::SetColumnAlias{table_id: *TIME_TIMER, column_ix: 2, column_alias: *TICKS},
-  ]
+  "#time/timer = [|period ticks|]".to_string()
 }
 
 #[derive(Debug)]
