@@ -34,7 +34,7 @@ impl Machine for Timer {
   }
 
   fn id(&self) -> u64 {
-    Register{table_id: TableId::Global(*TIME_TIMER), row: TableIndex::All, column: TableIndex::All}.hash()
+    Register{table_id: TableId::Global(*TIME_TIMER), row: TableIndex::All, column: TableIndex::Alias(*PERIOD)}.hash()
   }
 
   fn on_change(&mut self, table: &Table) -> Result<(), String> {
