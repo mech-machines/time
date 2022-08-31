@@ -3,7 +3,6 @@ extern crate crossbeam_channel;
 use std::time::Duration;
 use mech_core::*;
 use mech_utilities::*;
-//use std::sync::mpsc::{self, Sender};
 use std::thread::{self};
 use crossbeam_channel::Sender;
 use std::collections::HashMap;
@@ -56,7 +55,7 @@ impl Machine for Timer {
                   thread::sleep(duration);
                   counter = counter + 1;
                   outgoing.send(RunLoopMessage::Transaction(vec![
-                    Change::Set((*TIME_TIMER,vec![(timer_row, TableIndex::Alias(*TICKS), Value::U64(U64::new(counter)))]))
+                    Change::Set((*TIME_TIMER,vec![(timer_row.clone(), TableIndex::Alias(*TICKS), Value::U64(U64::new(counter)))]))
                   ]));
                 }
               });

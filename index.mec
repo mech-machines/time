@@ -1,0 +1,22 @@
+time
+=====
+
+1. Description
+---------------
+
+Provides timers and functions for dealing with time.
+
+2. Provided Tables
+-------------------
+
+- #time/timer[period<ms> ticks<u64>]
+
+3. Info
+--------
+
+#time/machine = [
+  name: "time" 
+  version: "v0.0.1"
+  authors: "Corey Montella" 
+  machine-url: "https://gitlab.com/mech-lang/machines/time"
+  license: "Apache-2.0"]
