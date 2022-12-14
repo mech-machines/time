@@ -4,7 +4,7 @@ version = "0.0.4"
 authors = ["Corey Montella <corey@mech-lang.org>"]
 description = "Time library for the Mech language"
 documentation = "http://docs.mech-lang.org"
-homepage = "http://mech-lang.org"
+homepage = "https://mech-lang.org"
 repository = "https://github.com/mech-machines/time"
 keywords = ["mech", "language", "programming"]
 license = "Apache-2.0"
@@ -18,8 +18,9 @@ maintenance = { status = "actively-developed" }
 crate-type = ["dylib", "rlib"]
 
 [dependencies]
-mech-core = {git = "https://gitlab.com/mech-lang/core", branch = "v0.1-beta"}
+mech-core = {git = "https://gitlab.com/mech-lang/core", branch = "v0.1-beta", default-features = false}
 mech-utilities = {git = "https://gitlab.com/mech-lang/utilities", branch = "v0.1-beta"}
+
 
 time = "0.2.26"
 crossbeam-channel = "0.5.6"
