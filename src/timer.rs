@@ -61,7 +61,7 @@ impl Machine for Timer {
               });
               self.timers.insert(i,(value,timer_handle));
             }
-            _ => return Err(MechError{id: 4782, kind: MechErrorKind::None}),
+            _ => return Err(MechError{msg: "".to_string(), id: 4782, kind: MechErrorKind::None}),
           }
         }
       }
